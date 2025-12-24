@@ -9,7 +9,9 @@ from sklearn.feature_selection import mutual_info_regression
 import seaborn as sns
 
 # ========== LOAD DATA FROM CSV ==========
-csv_file = 'DataDictionary2u8noNull.csv'
+scratchDir = './tmp/'
+dataDir = '/home/tom/Personal/fun/Giga/'
+csv_file = dataDir + 'DataDictionary2u8noNull.csv'
 target_column = 'PredLon_24'
 
 print(f"\nLOADING DATA FROM {csv_file}")
@@ -184,7 +186,7 @@ try:
                     'dt_rank', 'rf_rank', 'mi_rank', 'corr_rank']].head(30))
     
     # Save to CSV for further analysis
-    combined.to_csv('feature_importances_combined.csv', index=False)
+    combined.to_csv(scratchDir + 'feature_importances_combined.csv', index=False)
     print("\nFull feature importance rankings saved to 'feature_importances_combined.csv'")
     
     # ========== VISUALIZATIONS ==========
@@ -237,7 +239,7 @@ try:
     axes[1, 1].grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig('feature_importance_comparison.png', dpi=150, bbox_inches='tight')
+    plt.savefig(scratchDir + 'feature_importance_comparison.png', dpi=150, bbox_inches='tight')
     print("Feature importance comparison saved to 'feature_importance_comparison.png'")
     
     # Plot 2: Combined ranking
@@ -254,7 +256,7 @@ try:
     ax.grid(True, alpha=0.3, axis='x')
     
     plt.tight_layout()
-    plt.savefig('combined_feature_ranking.png', dpi=150, bbox_inches='tight')
+    plt.savefig(scratchDir + 'combined_feature_ranking.png', dpi=150, bbox_inches='tight')
     print("Combined feature ranking saved to 'combined_feature_ranking.png'")
     
     # Plot 3: Feature importance distribution
@@ -285,7 +287,7 @@ try:
     axes[1, 1].set_yscale('log')
     
     plt.tight_layout()
-    plt.savefig('importance_distributions.png', dpi=150, bbox_inches='tight')
+    plt.savefig(scratchDir + 'importance_distributions.png', dpi=150, bbox_inches='tight')
     print("Importance distributions saved to 'importance_distributions.png'")
     
     # ========== FEATURE SELECTION EXPERIMENT ==========
@@ -342,7 +344,7 @@ try:
     ax.set_xscale('log')
     
     plt.tight_layout()
-    plt.savefig('feature_selection_performance.png', dpi=150, bbox_inches='tight')
+    plt.savefig(scratchDir + 'feature_selection_performance.png', dpi=150, bbox_inches='tight')
     print("\nFeature selection performance saved to 'feature_selection_performance.png'")
     
     # ========== RECOMMENDATIONS ==========
