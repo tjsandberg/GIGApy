@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 # ========== LOAD DATA FROM CSV ==========
 scratchDir = './tmp/'
 dataDir = '/home/tom/Personal/fun/Giga/'
-csv_file = dataDir + 'DataDictionary3noNull.csv'
+csv_file = dataDir + 'Data Dictionary 3.csv'
 target_column_1 = 'PredLat_24'
 target_column_2 = 'PredLon_24'
 # target_column = ['PredLat_24', 'PredLon_24'] # TJS this didn't work - investigate
@@ -65,15 +65,18 @@ try:
     
     corr_importances = pd.DataFrame({
         'feature': correlations.index,
-        target_column_1: correlations.values
+        'abs_corr': correlations.values
     })
     
     print(f"\nTop 20 Features for {target_column_1} by Absolute Correlation:")
     print(corr_importances.head(20))
     
     # Save to CSV for further analysis
+    out_header_lines = 'Correlations for ' + target_column_1 + ' from input file: ' + csv_file + '.'
     outFileName = scratchDir + target_column_1 + '_correlations.csv'
-    corr_importances.to_csv(outFileName, index=False)
+    with open(outFileName, 'w') as f:
+        f.write(out_header_lines.strip() + '\n') # .strip() removes leading/trailing white space for clean output
+        corr_importances.to_csv(f, index=False) 
     print(f"{target_column_1} correlations saved to '{outFileName}'")
 
 
@@ -90,15 +93,18 @@ try:
     
     corr_importances = pd.DataFrame({
         'feature': correlations.index,
-        target_column_2: correlations.values
+        'abs_corr': correlations.values
     })
     
     print(f"\nTop 20 Features for {target_column_2} by Absolute Correlation:")
     print(corr_importances.head(20))
     
     # Save to CSV for further analysis
+    out_header_lines = 'Correlations for ' + target_column_2 + ' from input file: ' + csv_file + '.'
     outFileName = scratchDir + target_column_2 + '_correlations.csv'
-    corr_importances.to_csv(outFileName, index=False)
+    with open(outFileName, 'w') as f:
+        f.write(out_header_lines.strip() + '\n') # .strip() removes leading/trailing white space for clean output
+        corr_importances.to_csv(f, index=False) 
     print(f"{target_column_2} correlations saved to '{outFileName}'")
 
 
