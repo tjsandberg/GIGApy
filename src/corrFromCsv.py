@@ -5,13 +5,14 @@ import matplotlib.pyplot as plt
 # ========== LOAD DATA FROM CSV ==========
 scratchDir = './tmp/'
 dataDir = '/home/tom/Personal/fun/Giga/'
-csv_file = dataDir + 'Data Dictionary 3.csv'
-target_column_1 = 'PredLat_24'
-target_column_2 = 'PredLon_24'
+csv_file = dataDir + 'DataDictionary3noNull.csv'
+# target_column_1 = 'PredLat_24'
+# target_column_2 = 'PredLon_24'
+target_columns = ['PredLat_24', 'PredLon_24']
 # target_column = ['PredLat_24', 'PredLon_24'] # TJS this didn't work - investigate
 
 print(f"\nLOADING DATA FROM {csv_file}")
-print(f"Correlation Targets: {target_column_1}, {target_column_2}")
+print(f"Correlation Targets: {target_columns}")
 
 try:
     df = pd.read_csv(csv_file, sep=',')
@@ -53,60 +54,31 @@ try:
         X_nonzero = X
      
 # Do first target column
-
-    y = df[target_column_1]
-    correlations = X_nonzero.corrwith(y).abs().sort_values(ascending=False)
-    
-    # Add back zero-variance features with correlation = 0
-    for feat in zero_var_features:
-        correlations[feat] = 0.0
-    
-    correlations = correlations.sort_values(ascending=False)
-    
-    corr_importances = pd.DataFrame({
-        'feature': correlations.index,
-        'abs_corr': correlations.values
-    })
-    
-    print(f"\nTop 20 Features for {target_column_1} by Absolute Correlation:")
-    print(corr_importances.head(20))
-    
-    # Save to CSV for further analysis
-    out_header_lines = 'Correlations for ' + target_column_1 + ' from input file: ' + csv_file + '.'
-    outFileName = scratchDir + target_column_1 + '_correlations.csv'
-    with open(outFileName, 'w') as f:
-        f.write(out_header_lines.strip() + '\n') # .strip() removes leading/trailing white space for clean output
-        corr_importances.to_csv(f, index=False) 
-    print(f"{target_column_1} correlations saved to '{outFileName}'")
-
-
-# Do second target column
-    
-    y = df[target_column_2]
-    correlations = X_nonzero.corrwith(y).abs().sort_values(ascending=False)
-    
-    # Add back zero-variance features with correlation = 0
-    for feat in zero_var_features:
-        correlations[feat] = 0.0
-    
-    correlations = correlations.sort_values(ascending=False)
-    
-    corr_importances = pd.DataFrame({
-        'feature': correlations.index,
-        'abs_corr': correlations.values
-    })
-    
-    print(f"\nTop 20 Features for {target_column_2} by Absolute Correlation:")
-    print(corr_importances.head(20))
-    
-    # Save to CSV for further analysis
-    out_header_lines = 'Correlations for ' + target_column_2 + ' from input file: ' + csv_file + '.'
-    outFileName = scratchDir + target_column_2 + '_correlations.csv'
-    with open(outFileName, 'w') as f:
-        f.write(out_header_lines.strip() + '\n') # .strip() removes leading/trailing white space for clean output
-        corr_importances.to_csv(f, index=False) 
-    print(f"{target_column_2} correlations saved to '{outFileName}'")
-
+    for tc in target_columns:
+        y = df[tc]
+        correlations = X_nonzero.corrwith(y).abs().sort_values(ascending=False)
+        
+        # Add back zero-variance features with correlation = 0
+        for feat in zero_var_features:
+            correlations[feat] = 0.0
+        
+        correlations = correlations.sort_values(ascending=False)
+        
+        corr_importances = pd.DataFrame({
+            'feature': correlations.index,
+            'abs_corr': correlations.values
+        })
+        
+        print(f"\nTop 20 Features for {tc} by Absolute Correlation:")
+        print(corr_importances.head(20))
+        
+        # Save to CSV for further analysis
+        out_header_lines = 'Correlations for ' + tc + ' from input file: ' + csv_file + '.'
+        outFileName = scratchDir + tc + '_correlations.csv'
+        with open(outFileName, 'w') as f:
+            f.write(out_header_lines.strip() + '\n') # .strip() removes leading/trailing white space for clean output
+            corr_importances.to_csv(f, index=False) 
+        print(f"{tc} correlations saved to '{outFileName}'")
 
 except Exception as e:
     print(f"\nAn error occurred: {type(e).__name__}")
