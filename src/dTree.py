@@ -11,8 +11,9 @@ import seaborn as sns
 # ========== LOAD DATA FROM CSV ==========
 scratchDir = './tmp/'
 dataDir = '/home/tom/Personal/fun/Giga/'
-csv_file = dataDir + 'DataDictionary2u8noNull.csv'
-target_column = 'PredLon_24'
+csv_fn = 'DataDictionary3noNull.csv'
+csv_file = dataDir + csv_fn
+target_column = 'PredLat_24'
 
 print(f"\nLOADING DATA FROM {csv_file}")
 print(f"Predicting {target_column}")
@@ -186,8 +187,8 @@ try:
                     'dt_rank', 'rf_rank', 'mi_rank', 'corr_rank']].head(30))
     
     # Save to CSV for further analysis
-    combined.to_csv(scratchDir + 'feature_importances_combined.csv', index=False)
-    print("\nFull feature importance rankings saved to 'feature_importances_combined.csv'")
+    combined.to_csv(scratchDir + target_column + '_feat_imps_combined.csv', index=False)
+    print("f\nFull feature importance rankings saved to " + scratchDir + target_column + "_feat_imps_combined.csv")
     
     # ========== VISUALIZATIONS ==========
     print("\n" + "=" * 50)
@@ -205,7 +206,7 @@ try:
     axes[0, 0].set_yticklabels(top_dt['feature'], fontsize=8)
     axes[0, 0].invert_yaxis()
     axes[0, 0].set_xlabel('Importance')
-    axes[0, 0].set_title('Decision Tree Feature Importance (Top 30)')
+    axes[0, 0].set_title('DT Feat Imp for ' + target_column + ' from ' + csv_fn)
     axes[0, 0].grid(True, alpha=0.3)
     
     # Random Forest
@@ -215,7 +216,7 @@ try:
     axes[0, 1].set_yticklabels(top_rf['feature'], fontsize=8)
     axes[0, 1].invert_yaxis()
     axes[0, 1].set_xlabel('Importance')
-    axes[0, 1].set_title('Random Forest Feature Importance (Top 30)')
+    axes[0, 1].set_title('RF Feat Imp for ' + target_column + ' from ' + csv_fn)
     axes[0, 1].grid(True, alpha=0.3)
     
     # Mutual Information
@@ -225,7 +226,7 @@ try:
     axes[1, 0].set_yticklabels(top_mi['feature'], fontsize=8)
     axes[1, 0].invert_yaxis()
     axes[1, 0].set_xlabel('MI Score')
-    axes[1, 0].set_title('Mutual Information (Top 30)')
+    axes[1, 0].set_title('MI Imp for ' + target_column + ' from ' + csv_fn)
     axes[1, 0].grid(True, alpha=0.3)
     
     # Correlation
@@ -235,12 +236,12 @@ try:
     axes[1, 1].set_yticklabels(top_corr['feature'], fontsize=8)
     axes[1, 1].invert_yaxis()
     axes[1, 1].set_xlabel('Absolute Correlation')
-    axes[1, 1].set_title('Correlation with Target (Top 30)')
+    axes[1, 1].set_title('Corr for ' + target_column + ' from ' + csv_fn)
     axes[1, 1].grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig(scratchDir + 'feature_importance_comparison.png', dpi=150, bbox_inches='tight')
-    print("Feature importance comparison saved to 'feature_importance_comparison.png'")
+    plt.savefig(scratchDir + target_column + '_feat_imp_comp.png', dpi=150, bbox_inches='tight')
+    print(f"Feature importance comparison saved to " + scratchDir + target_column + "_feat_imp_comp.png")
     
     # Plot 2: Combined ranking
     fig, ax = plt.subplots(figsize=(12, 14))
@@ -252,12 +253,12 @@ try:
     ax.set_yticklabels(top_combined['feature'], fontsize=9)
     ax.invert_yaxis()
     ax.set_xlabel('Combined Score (based on average rank)')
-    ax.set_title('Top 40 Features by Combined Ranking')
+    ax.set_title('Top 40 Features for ' + target_column + ' by Combined Ranking')
     ax.grid(True, alpha=0.3, axis='x')
     
     plt.tight_layout()
-    plt.savefig(scratchDir + 'combined_feature_ranking.png', dpi=150, bbox_inches='tight')
-    print("Combined feature ranking saved to 'combined_feature_ranking.png'")
+    plt.savefig(scratchDir + target_column + '_comb_feature_ranking.png', dpi=150, bbox_inches='tight')
+    print(f"Combined feature ranking saved to " + scratchDir + target_column + "_comb_feature_ranking.png")
     
     # Plot 3: Feature importance distribution
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
@@ -265,30 +266,30 @@ try:
     axes[0, 0].hist(dt_importances['importance'], bins=50, edgecolor='black')
     axes[0, 0].set_xlabel('Importance')
     axes[0, 0].set_ylabel('Count')
-    axes[0, 0].set_title('Decision Tree Importance Distribution')
+    axes[0, 0].set_title('DT Imp Dist for ' + target_column)
     axes[0, 0].set_yscale('log')
     
     axes[0, 1].hist(rf_importances['importance'], bins=50, edgecolor='black')
     axes[0, 1].set_xlabel('Importance')
     axes[0, 1].set_ylabel('Count')
-    axes[0, 1].set_title('Random Forest Importance Distribution')
+    axes[0, 1].set_title('RF Imp Dist for ' + target_column)
     axes[0, 1].set_yscale('log')
     
     axes[1, 0].hist(mi_importances['mi_score'], bins=50, edgecolor='black')
     axes[1, 0].set_xlabel('MI Score')
     axes[1, 0].set_ylabel('Count')
-    axes[1, 0].set_title('Mutual Information Distribution')
+    axes[1, 0].set_title('MI Dist for ' + target_column)
     axes[1, 0].set_yscale('log')
     
     axes[1, 1].hist(corr_importances['abs_correlation'], bins=50, edgecolor='black')
     axes[1, 1].set_xlabel('Absolute Correlation')
     axes[1, 1].set_ylabel('Count')
-    axes[1, 1].set_title('Correlation Distribution')
+    axes[1, 1].set_title('Corr Dist for ' + target_column)
     axes[1, 1].set_yscale('log')
     
     plt.tight_layout()
-    plt.savefig(scratchDir + 'importance_distributions.png', dpi=150, bbox_inches='tight')
-    print("Importance distributions saved to 'importance_distributions.png'")
+    plt.savefig(scratchDir + target_column + '_imp_dists.png', dpi=150, bbox_inches='tight')
+    print(f"Importance distributions saved to " + scratchDir + target_column + "_imp_dists.png")
     
     # ========== FEATURE SELECTION EXPERIMENT ==========
     print("\n" + "=" * 50)
@@ -338,14 +339,14 @@ try:
             marker='s', label='Test R²', linewidth=2)
     ax.set_xlabel('Number of Features')
     ax.set_ylabel('R² Score')
-    ax.set_title('Model Performance vs Number of Features')
+    ax.set_title('Model Performance for ' + target_column + ' vs Number of Features')
     ax.legend()
     ax.grid(True, alpha=0.3)
     ax.set_xscale('log')
     
     plt.tight_layout()
-    plt.savefig(scratchDir + 'feature_selection_performance.png', dpi=150, bbox_inches='tight')
-    print("\nFeature selection performance saved to 'feature_selection_performance.png'")
+    plt.savefig(scratchDir + target_column + '_feat_sel_perf.png', dpi=150, bbox_inches='tight')
+    print(f"\nFeature selection performance saved to " + scratchDir + target_column + "_feat_sel_perf.png")
     
     # ========== RECOMMENDATIONS ==========
     print("\n" + "=" * 50)
