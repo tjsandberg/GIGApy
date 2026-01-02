@@ -1,21 +1,25 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import argparse
+
+# 1. Create argument parser object
+parser = argparse.ArgumentParser(description="A script that computes correlations. TJS add more here.")
+
+# 2. Add arguments
+parser.add_argument('dbaseInFile', type=str, help="Path and file name for database input file in csv format.")
+parser.add_argument('--scratchDir', type=str, default= './tmp/', help="(Optional) Path to directory for output files. Default: --scratchDir ./tmp/")
+parser.add_argument('--targetColumns', nargs='+', type=str, default=['PredLat_24', 'PredLon_24'], help="(Optional) Correlation target(s). Default: --targets PredLat_24 PredLon_24")
+
+# 3. Parse the arguments from the command line
+args = parser.parse_args()
 
 # ========== LOAD DATA FROM CSV ==========
-scratchDir = './tmp/'
-dataDir = '/home/tom/Personal/fun/Giga/'
-csv_file = dataDir + 'DataDictionary3noNull.csv'
-# target_column_1 = 'PredLat_24'
-# target_column_2 = 'PredLon_24'
-target_columns = ['PredLat_24', 'PredLon_24']
-# target_column = ['PredLat_24', 'PredLon_24'] # TJS this didn't work - investigate
-
-print(f"\nLOADING DATA FROM {csv_file}")
-print(f"Correlation Targets: {target_columns}")
+print(f"\nLOADING DATA FROM {args.dbaseInFile}")
+print(f"Correlation Targets: {args.targetColumns}")
 
 try:
-    df = pd.read_csv(csv_file, sep=',')
+    df = pd.read_csv(args.dbaseInFile, sep=',')
     print(f"Dataset shape: {df.shape}")
     
     # Extract features and target
@@ -54,7 +58,7 @@ try:
         X_nonzero = X
      
 # Do first target column
-    for tc in target_columns:
+    for tc in args.targetColumns:
         y = df[tc]
         correlations = X_nonzero.corrwith(y).abs().sort_values(ascending=False)
         
@@ -73,8 +77,8 @@ try:
         print(corr_importances.head(20))
         
         # Save to CSV for further analysis
-        out_header_lines = 'Correlations for ' + tc + ' from input file: ' + csv_file + '.'
-        outFileName = scratchDir + tc + '_correlations.csv'
+        out_header_lines = 'Correlations for ' + tc + ' from input file: ' + args.dbaseInFile + '.'
+        outFileName = args.scratchDir + tc + '_correlations.csv'
         with open(outFileName, 'w') as f:
             f.write(out_header_lines.strip() + '\n') # .strip() removes leading/trailing white space for clean output
             corr_importances.to_csv(f, index=False) 
