@@ -8,28 +8,31 @@ parser = argparse.ArgumentParser(description="A script that computes correlation
 
 # 2. Add arguments
 parser.add_argument('dbaseInFile', type=str, help="Path and file name for database input file in csv format.")
+parser.add_argument('--dbUsage', type=str, help="Path and file name for database usage file in csv format.")
 parser.add_argument('--scratchDir', type=str, default= './tmp/', help="(Optional) Path to directory for output files. Default: --scratchDir ./tmp/")
-parser.add_argument('--targetColumns', nargs='+', type=str, default=['PredLat_24', 'PredLon_24'], help="(Optional) Correlation target(s). Default: --targets PredLat_24 PredLon_24")
 
 # 3. Parse the arguments from the command line
 args = parser.parse_args()
 
-# ========== LOAD DATA FROM CSV ==========
-print(f"\nLOADING DATA FROM {args.dbaseInFile}")
-print(f"Correlation Targets: {args.targetColumns}")
-
 try:
+
+    # ========== LOAD DATA FROM CSV ==========
+    print(f"\nLOADING DATA FROM {args.dbaseInFile}")
     df = pd.read_csv(args.dbaseInFile, sep=',')
     print(f"Dataset shape: {df.shape}")
+
+    # ========== LOAD Feature Usage FROM CSV ==========
+    print(f"\nLOADING Feature Usage FROM {args.dbUsage}")
+    dfUsage = pd.read_csv(args.dbUsage, sep=',')
+
+    targetColumns = dfUsage["Feature"][(dfUsage["Usage"] == "target")]
+    #print(f"Correlation Targets:\n{targetColumns}\n")
     
-    # Extract features and target
-    X = df.drop(columns=['Test', 'Name', 'Desig', 'StormNum', 'SampleNum', 'QuadSample',
-        'PredLat_24', 'PredLon_24', 'PredBearing_24', 'PredDistance_24',
-        'HistBearing_6', 'HistDistance_6', 'HistBearing_12', 'HistDistance_12', 'HistBearing_18', 'HistDistance_18',
-        'HistBearing_24', 'HistDistance_24', 'HistBearing_30', 'HistDistance_30', 'HistBearing_36', 'HistDistance_36',
-        'HistBearing_42', 'HistDistance_42', 'HistBearing_48', 'HistDistance_48', 'HistBearing_54', 'HistDistance_54',
-        'HistBearing_60', 'HistDistance_60', 'HistBearing_66', 'HistDistance_66', 'HistBearing_72', 'HistDistance_72'
-        ])
+    dropFeatures = dfUsage["Feature"][(dfUsage["Usage"] == "target") | (dfUsage["Usage"] == "ignore")]
+    #print(f"Dropped features:\n{dropFeatures}\n")
+    
+    # Drop target features and other features to be ignored
+    X = df.drop(columns=dropFeatures)
     
     # Ignore non-numeric input columns
     X = X.select_dtypes(include=[np.number])
@@ -58,7 +61,7 @@ try:
         X_nonzero = X
      
 # Do first target column
-    for tc in args.targetColumns:
+    for tc in targetColumns:
         y = df[tc]
         correlations = X_nonzero.corrwith(y).abs().sort_values(ascending=False)
         
