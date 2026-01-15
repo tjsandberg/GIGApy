@@ -1,0 +1,134 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import argparse
+
+# 1. Create argument parser object
+parser = argparse.ArgumentParser(description="A script that computes correlations after splitting the data set around the mean/median value for a specific input.")
+
+# 2. Add arguments
+parser.add_argument('dbaseInFile', type=str, help="Path and file name for database input file in csv format.")
+parser.add_argument('--dbUsage', type=str, help="Path and file name for database usage file in csv format.")
+parser.add_argument('--scratchDir', type=str, default= './tmp/', help="(Optional) Path to directory for output files. Default: --scratchDir ./tmp/")
+
+# 3. Parse the arguments from the command line
+args = parser.parse_args()
+
+try:
+
+    # ========== LOAD DATA FROM CSV ==========
+    print(f"\nLOADING DATA FROM {args.dbaseInFile}")
+    df = pd.read_csv(args.dbaseInFile, sep=',')
+    print(f"Dataset shape: {df.shape}")
+
+    # ========== LOAD Feature Usage FROM CSV ==========
+    print(f"\nLOADING Feature Usage FROM {args.dbUsage}")
+    dfUsage = pd.read_csv(args.dbUsage, sep=',')
+
+    targetColumns = dfUsage["Feature"][(dfUsage["Usage"] == "target")]
+    #print(f"Correlation Targets:\n{targetColumns}\n")
+    
+    dropFeatures = dfUsage["Feature"][(dfUsage["Usage"] == "target") | (dfUsage["Usage"] == "ignore")]
+    #print(f"Dropped features:\n{dropFeatures}\n")
+    
+    # Drop target features and other features to be ignored
+    X = df.drop(columns=dropFeatures)
+    
+    # Ignore non-numeric input columns
+    X = X.select_dtypes(include=[np.number])
+        
+    print(f"Final number of features: {X.shape[1]} after dropping non-numeric columns")
+    print(f"Number of samples: {X.shape[0]}")    
+    
+    # ========== CORRELATION WITH TARGET ==========
+    print("\n" + "=" * 50)
+    print("CORRELATION WITH TARGET")
+    print("(Simple linear relationship)")
+    print("=" * 50)
+    
+    # Check for zero-variance features
+    feature_std = X.std()
+    zero_var_features = feature_std[feature_std == 0].index.tolist()
+    
+    if zero_var_features:
+        print(f"\nWarning: {len(zero_var_features)} features have zero variance (constant values)")
+        print(f"These features will be excluded from correlation analysis")
+        print(f"Zero-variance features: {zero_var_features[:10]}{'...' if len(zero_var_features) > 10 else ''}")
+        
+        # Remove zero-variance features for correlation calculation
+        X_nonzero = X.drop(columns=zero_var_features)
+    else:
+        X_nonzero = X
+
+
+    # ========== CONFIGURE CUSTOM SPLIT ==========
+    # Specify which feature and threshold to use for the first split
+    SPLIT_FEATURE = 'T2M_300_270_10'  # Change this to your desired feature name
+    #SPLIT_THRESHOLD = 0.5   # Change this to your desired threshold value
+    SPLIT_THRESHOLD = X_nonzero[SPLIT_FEATURE].median()
+    split_threshold_str = str(SPLIT_THRESHOLD)
+
+    print(f"\nForcing first split on: {SPLIT_FEATURE} <= {SPLIT_THRESHOLD}")
+
+    # ========== CREATE MANUAL FIRST SPLIT ==========
+
+    # Split training data based on your custom rule
+    mask_train_left = X_nonzero[SPLIT_FEATURE] <= SPLIT_THRESHOLD
+    mask_train_right = X_nonzero[SPLIT_FEATURE] > SPLIT_THRESHOLD
+
+    X_left = X_nonzero[mask_train_left]
+    X_right = X_nonzero[mask_train_right]
+
+    print(f"\nLeft branch (<=): {len(X_left)} samples")
+    print(f"Right branch (>): {len(X_right)} samples")
+
+    # ========== CORRELATE SUBTREES ==========
+    print("\n" + "=" * 50)
+    print("CORRELATING SUBTREES")
+    print("=" * 50)
+     
+# Do first target column
+    for tc in targetColumns:
+        y = df[tc]
+        y_left = y[mask_train_left]
+        y_right = y[mask_train_right]        
+        correlations_left = X_left.corrwith(y_left).abs().sort_values(ascending=False)
+        correlations_right = X_right.corrwith(y_right).abs().sort_values(ascending=False)
+        
+        # Add back zero-variance features with correlation = 0
+        #for feat in zero_var_features:
+            #correlations[feat] = 0.0
+        
+        correlations_left = correlations_left.sort_values(ascending=False)
+        correlations_right = correlations_right.sort_values(ascending=False)
+        
+        corr_importances_left = pd.DataFrame({
+            'feature': correlations_left.index,
+            'abs_corr_left': correlations_left.values
+        })
+        corr_importances_right = pd.DataFrame({
+            'feature': correlations_right.index,
+            'abs_corr_right': correlations_right.values
+        })
+        corr_importances = pd.merge(corr_importances_left, corr_importances_right, on="feature")        
+        print(f"\nTop 20 Features for {tc} by Absolute Correlation (left):")
+        print(corr_importances_left.head(20))
+        print(f"\nTop 20 Features for {tc} by Absolute Correlation (right):")
+        print(corr_importances_right.head(20))
+        print(f"\nTop 20 Features for {tc} by Absolute Correlation (all):")
+        print(corr_importances.head(20))
+                
+        # Save to CSV for further analysis
+        out_header_lines = 'Correlations for ' + tc + ' from input file: ' + args.dbaseInFile
+        out_header_lines += ' split on: ' + SPLIT_FEATURE + ' <= ' + split_threshold_str + '.'
+        outFileName = args.scratchDir + tc + '_correlations.csv'
+        with open(outFileName, 'w') as f:
+            f.write(out_header_lines.strip() + '\n') # .strip() removes leading/trailing white space for clean output
+            corr_importances.to_csv(f, index=False) 
+        print(f"{tc} correlations saved to '{outFileName}'")
+
+except Exception as e:
+    print(f"\nAn error occurred: {type(e).__name__}")
+    print(f"Details: {e}")
+    import traceback
+    traceback.print_exc()
