@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import argparse
+from datetime import datetime
 
 # 1. Create argument parser object
 parser = argparse.ArgumentParser(description="A script that computes correlations after splitting the data set around the mean/median value for a specific input.")
@@ -118,13 +119,20 @@ try:
         print(f"\nTop 20 Features for {tc} by Absolute Correlation (all):")
         print(corr_importances.head(20))
                 
-        # Save to CSV for further analysis
-        out_header_lines = 'Correlations for ' + tc + ' from input file: ' + args.dbaseInFile
-        out_header_lines += ' split on: ' + SPLIT_FEATURE + ' <= ' + split_threshold_str + '.'
-        outFileName = args.scratchDir + tc + '_correlations.csv'
-        with open(outFileName, 'w') as f:
-            f.write(out_header_lines.strip() + '\n') # .strip() removes leading/trailing white space for clean output
-            corr_importances.to_csv(f, index=False) 
+        # Create notes to save to output file
+        notesData = {
+            "Field": ["Target", "Input File", "Usage File", "SplitFeature", "SplitThresh"],
+            "Value": [tc, args.dbaseInFile, args.dbUsage, SPLIT_FEATURE, split_threshold_str]
+        }
+        notes = pd.DataFrame(notesData)
+        
+        # Create unique file name and write to it
+        now = datetime.now()
+        outFileName = f"{args.scratchDir}{tc}_{now:%Y%m%d%H%M%S}_corr.ods"
+        with pd.ExcelWriter(outFileName) as writer:  
+            corr_importances.to_excel(writer, sheet_name='Corr')
+            dfUsage.to_excel(writer, sheet_name='Usage')
+            notes.to_excel(writer, sheet_name='Notes')
         print(f"{tc} correlations saved to '{outFileName}'")
 
 except Exception as e:
