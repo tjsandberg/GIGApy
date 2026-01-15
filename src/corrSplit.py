@@ -65,64 +65,64 @@ try:
     # ========== CONFIGURE CUSTOM SPLIT ==========
     # Specify which feature and threshold to use for the first split
     SPLIT_FEATURE = 'T2M_300_270_10'  # Change this to your desired feature name
-    #SPLIT_THRESHOLD = 0.5   # Change this to your desired threshold value
     SPLIT_THRESHOLD = X_nonzero[SPLIT_FEATURE].median()
-    split_threshold_str = str(SPLIT_THRESHOLD)
+
 
     print(f"\nForcing first split on: {SPLIT_FEATURE} <= {SPLIT_THRESHOLD}")
 
     # ========== CREATE MANUAL FIRST SPLIT ==========
 
     # Split training data based on your custom rule
-    mask_train_left = X_nonzero[SPLIT_FEATURE] <= SPLIT_THRESHOLD
-    mask_train_right = X_nonzero[SPLIT_FEATURE] > SPLIT_THRESHOLD
+    mask_train_LT = X_nonzero[SPLIT_FEATURE] <= SPLIT_THRESHOLD
+    mask_train_GT = X_nonzero[SPLIT_FEATURE] > SPLIT_THRESHOLD
 
-    X_left = X_nonzero[mask_train_left]
-    X_right = X_nonzero[mask_train_right]
+    X_LT = X_nonzero[mask_train_LT]
+    X_GT = X_nonzero[mask_train_GT]
 
-    print(f"\nLeft branch (<=): {len(X_left)} samples")
-    print(f"Right branch (>): {len(X_right)} samples")
+    print(f"\nLT branch (<=): {len(X_LT)} samples")
+    print(f"GT branch (>): {len(X_GT)} samples")
 
     # ========== CORRELATE SUBTREES ==========
     print("\n" + "=" * 50)
     print("CORRELATING SUBTREES")
     print("=" * 50)
      
-# Do first target column
+# Do each target column
     for tc in targetColumns:
         y = df[tc]
-        y_left = y[mask_train_left]
-        y_right = y[mask_train_right]        
-        correlations_left = X_left.corrwith(y_left).abs().sort_values(ascending=False)
-        correlations_right = X_right.corrwith(y_right).abs().sort_values(ascending=False)
+        y_LT = y[mask_train_LT]
+        y_GT = y[mask_train_GT]        
+        correlations_all = X_nonzero.corrwith(y).abs().sort_values(ascending=False)
+        correlations_LT = X_LT.corrwith(y_LT).abs().sort_values(ascending=False)
+        correlations_GT = X_GT.corrwith(y_GT).abs().sort_values(ascending=False)
         
-        # Add back zero-variance features with correlation = 0
-        #for feat in zero_var_features:
-            #correlations[feat] = 0.0
-        
-        correlations_left = correlations_left.sort_values(ascending=False)
-        correlations_right = correlations_right.sort_values(ascending=False)
-        
-        corr_importances_left = pd.DataFrame({
-            'feature': correlations_left.index,
-            'abs_corr_left': correlations_left.values
+        corr_importances_all = pd.DataFrame({
+            'feature': correlations_all.index,
+            'abs_corr_all': correlations_all.values
         })
-        corr_importances_right = pd.DataFrame({
-            'feature': correlations_right.index,
-            'abs_corr_right': correlations_right.values
+        corr_importances_LT = pd.DataFrame({
+            'feature': correlations_LT.index,
+            'abs_corr_LT': correlations_LT.values
         })
-        corr_importances = pd.merge(corr_importances_left, corr_importances_right, on="feature")        
-        print(f"\nTop 20 Features for {tc} by Absolute Correlation (left):")
-        print(corr_importances_left.head(20))
-        print(f"\nTop 20 Features for {tc} by Absolute Correlation (right):")
-        print(corr_importances_right.head(20))
+        corr_importances_GT = pd.DataFrame({
+            'feature': correlations_GT.index,
+            'abs_corr_GT': correlations_GT.values
+        })
+        corr_importances = pd.merge(corr_importances_all, corr_importances_LT, on="feature")        
+        corr_importances = pd.merge(corr_importances, corr_importances_GT, on="feature")
+        
+        '''
+        print(f"\nTop 20 Features for {tc} by Absolute Correlation (LT):")
+        print(corr_importances_LT.head(20))
+        print(f"\nTop 20 Features for {tc} by Absolute Correlation (GT):")
+        print(corr_importances_GT.head(20))
         print(f"\nTop 20 Features for {tc} by Absolute Correlation (all):")
         print(corr_importances.head(20))
-                
+        '''                
         # Create notes to save to output file
         notesData = {
             "Field": ["Target", "Input File", "Usage File", "SplitFeature", "SplitThresh"],
-            "Value": [tc, args.dbaseInFile, args.dbUsage, SPLIT_FEATURE, split_threshold_str]
+            "Value": [tc, args.dbaseInFile, args.dbUsage, SPLIT_FEATURE, str(SPLIT_THRESHOLD)]
         }
         notes = pd.DataFrame(notesData)
         
