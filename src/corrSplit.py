@@ -27,10 +27,7 @@ try:
     dfUsage = pd.read_csv(args.dbUsage, sep=',')
 
     targetColumns = dfUsage["Feature"][(dfUsage["Usage"] == "target")]
-    #print(f"Correlation Targets:\n{targetColumns}\n")
-    
     dropFeatures = dfUsage["Feature"][(dfUsage["Usage"] == "target") | (dfUsage["Usage"] == "ignore")]
-    #print(f"Dropped features:\n{dropFeatures}\n")
     
     # Drop target features and other features to be ignored
     X = df.drop(columns=dropFeatures)
@@ -95,30 +92,30 @@ try:
         correlations_all = X_nonzero.corrwith(y).abs().sort_values(ascending=False)
         correlations_LT = X_LT.corrwith(y_LT).abs().sort_values(ascending=False)
         correlations_GT = X_GT.corrwith(y_GT).abs().sort_values(ascending=False)
-        
+
         corr_importances_all = pd.DataFrame({
             'feature': correlations_all.index,
-            'abs_corr_all': correlations_all.values
+            'abs_corr_all': correlations_all.values            
         })
+        corr_importances_all['ALL_rank'] = range(1, len(corr_importances_all) + 1)
+        
         corr_importances_LT = pd.DataFrame({
             'feature': correlations_LT.index,
             'abs_corr_LT': correlations_LT.values
         })
+        corr_importances_LT['LT_rank'] = range(1, len(corr_importances_LT) + 1)
+        
         corr_importances_GT = pd.DataFrame({
             'feature': correlations_GT.index,
             'abs_corr_GT': correlations_GT.values
         })
+        corr_importances_GT['GT_rank'] = range(1, len(corr_importances_GT) + 1)
+        
+        # Create consolidated dataframe
         corr_importances = pd.merge(corr_importances_all, corr_importances_LT, on="feature")        
         corr_importances = pd.merge(corr_importances, corr_importances_GT, on="feature")
-        
-        '''
-        print(f"\nTop 20 Features for {tc} by Absolute Correlation (LT):")
-        print(corr_importances_LT.head(20))
-        print(f"\nTop 20 Features for {tc} by Absolute Correlation (GT):")
-        print(corr_importances_GT.head(20))
-        print(f"\nTop 20 Features for {tc} by Absolute Correlation (all):")
-        print(corr_importances.head(20))
-        '''                
+        print(f"\nCorrelations for {tc}:\n{corr_importances.head(20)}")
+
         # Create notes to save to output file
         notesData = {
             "Field": ["Target", "Input File", "Usage File", "SplitFeature", "SplitThresh"],
