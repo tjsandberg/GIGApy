@@ -17,14 +17,17 @@ args = parser.parse_args()
 
 try:
 
-    # ========== LOAD DATA FROM CSV ==========
-    print(f"\nLOADING DATA FROM {args.dbaseInFile}")
-    df = pd.read_csv(args.dbaseInFile, sep=',')
-    print(f"Dataset shape: {df.shape}")
-
     # ========== LOAD Feature Usage FROM CSV ==========
     print(f"\nLOADING Feature Usage FROM {args.dbUsage}")
-    dfUsage = pd.read_csv(args.dbUsage, sep=',')
+    #dfUsage = pd.read_csv(args.dbUsage)
+    dfUsage = pd.read_excel(args.dbUsage)
+    feature_dtypes = dfUsage.set_index("Feature")["dtype"].to_dict()
+
+    # ========== LOAD DATA FROM CSV ==========
+    print(f"\nLOADING DATA FROM {args.dbaseInFile}")
+    df = pd.read_csv(args.dbaseInFile, sep=',', dtype=feature_dtypes)
+    print(f"Dataset shape: {df.shape}")
+    #df.dtypes.to_csv(args.scratchDir + 'dtypes.csv', index=True)
 
     targetColumns = dfUsage["Feature"][(dfUsage["Usage"] == "target")]
     dropFeatures = dfUsage["Feature"][(dfUsage["Usage"] == "target") | (dfUsage["Usage"] == "ignore")]
@@ -63,11 +66,7 @@ try:
     # Specify which feature and threshold to use for the first split
     SPLIT_FEATURE = 'T2M_300_270_10'  # Change this to your desired feature name
     SPLIT_THRESHOLD = X_nonzero[SPLIT_FEATURE].median()
-
-
     print(f"\nForcing first split on: {SPLIT_FEATURE} <= {SPLIT_THRESHOLD}")
-
-    # ========== CREATE MANUAL FIRST SPLIT ==========
 
     # Split training data based on your custom rule
     mask_train_LT = X_nonzero[SPLIT_FEATURE] <= SPLIT_THRESHOLD
