@@ -19,16 +19,32 @@ try:
 
     # ========== LOAD Feature Usage FROM CSV ==========
     print(f"\nLOADING Feature Usage FROM {args.dbUsage}")
-    #dfUsage = pd.read_csv(args.dbUsage)
     dfUsage = pd.read_excel(args.dbUsage)
-    feature_dtypes = dfUsage.set_index("Feature")["dtype"].to_dict()
+    feature_dtypes = dict(zip(dfUsage["Feature"], dfUsage["dtype"]))
+
+    # Replace Int64/Int32/etc with float64/float32 for reading (floats can handle NaN)
+    dtype_for_reading = {}
+    int_to_float_map = {'Int64': 'float64', 'Int32': 'float32', 'Int16': 'float32', 'Int8': 'float32'}
+
+    for col, dtype in feature_dtypes.items():
+        if dtype in int_to_float_map:
+            dtype_for_reading[col] = int_to_float_map[dtype]
+        else:
+            dtype_for_reading[col] = dtype
+    #print(f"dtype_for_reading: \n{dtype_for_reading}")
 
     # ========== LOAD DATA FROM CSV ==========
+    # Read with compatible dtypes
     print(f"\nLOADING DATA FROM {args.dbaseInFile}")
-    df = pd.read_csv(args.dbaseInFile, sep=',', dtype=feature_dtypes)
+    df = pd.read_csv(args.dbaseInFile, sep=',', dtype=dtype_for_reading)
     print(f"Dataset shape: {df.shape}")
-    #df.dtypes.to_csv(args.scratchDir + 'dtypes.csv', index=True)
 
+    # Convert float back to nullable Int after reading
+    for col, dtype in feature_dtypes.items():
+        if col in df.columns and dtype.startswith('Int'):
+            df[col] = df[col].astype(dtype)
+
+    #df.dtypes.to_csv(args.scratchDir + 'dtypes.csv', index=True)
     targetColumns = dfUsage["Feature"][(dfUsage["Usage"] == "target")]
     dropFeatures = dfUsage["Feature"][(dfUsage["Usage"] == "target") | (dfUsage["Usage"] == "ignore")]
     
