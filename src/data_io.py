@@ -111,7 +111,7 @@ def save_results_to_excel(filename, sheets_dict):
     """
     with pd.ExcelWriter(filename) as writer:
         for sheet_name, df in sheets_dict.items():
-            df.to_excel(writer, sheet_name=sheet_name)
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
     print(f"Results saved to '{filename}'")
 
 
@@ -164,3 +164,26 @@ def generate_output_filename(scratch_dir, prefix, timestamp=True, extension='ods
         filename = f"{scratch_dir}{prefix}.{extension}"
     
     return filename
+    
+def calculate_data_quality_stats(df, X):
+    """Calculate and report data quality statistics."""
+    stats = {}
+    
+    # Null percentages
+    null_pct = (X.isnull().sum() / len(X)) * 100
+    stats['Features_>50pct_null'] = (null_pct > 50).sum()
+    stats['Features_>20pct_null'] = (null_pct > 20).sum()
+    stats['Avg_null_pct'] = null_pct.mean()
+    
+    # Temporal coverage if available
+    if 'Year' in df.columns:
+        stats['Year_range'] = f"{df['Year'].min()}-{df['Year'].max()}"
+        stats['Years_covered'] = df['Year'].nunique()
+    
+    # Storm coverage
+    if 'Desig' in df.columns:
+        stats['Unique_storms'] = df['Desig'].nunique()
+        stats['Avg_obs_per_storm'] = len(df) / df['Desig'].nunique()
+    
+    return stats
+
