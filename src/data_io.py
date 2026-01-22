@@ -111,7 +111,7 @@ def save_results_to_excel(filename, sheets_dict):
     """
     with pd.ExcelWriter(filename) as writer:
         for sheet_name, df in sheets_dict.items():
-            df.to_excel(writer, sheet_name=sheet_name, index=False)
+            df.to_excel(writer, sheet_name=sheet_name, index=True)
     print(f"Results saved to '{filename}'")
 
 
@@ -187,3 +187,105 @@ def calculate_data_quality_stats(df, X):
     
     return stats
 
+def add_storm_maturity_features(df):
+    """
+    Add features indicating storm age/maturity using existing SampleNum.
+    SampleNum is 0-indexed and handles gaps in observations correctly.
+    """
+    # Storm age in hours (SampleNum * 6 since samples are 6hr apart)
+    df['storm_age_hours'] = df['SampleNum'] * 6
+    df['storm_age_days'] = df['storm_age_hours'] / 24
+    
+    # Is this an early observation? (first 24 hours of tracking)
+    df['is_early_storm'] = (df['storm_age_hours'] < 24).astype(int)
+    
+    print(f"\nStorm maturity features added:")
+    print(f"  Age range: {df['storm_age_hours'].min()}-{df['storm_age_hours'].max()} hours")
+    print(f"  Early storm samples: {df['is_early_storm'].sum()} / {len(df)}")
+    
+    return df
+
+
+def add_lag_availability_indicators(df):
+    """
+    Add binary indicators for whether historical data is available.
+    Uses 0-indexed SampleNum to determine which lags should exist.
+    """
+    lag_windows = [6, 12, 18, 24, 30, 36, 42, 48, 54, 60, 66, 72]
+    
+    for lag in lag_windows:
+        # Available if SampleNum >= required_samples
+        # e.g., 24hr lag needs SampleNum >= 4 (samples 0,1,2,3 = 4 prior samples)
+        required_samples = lag // 6
+        df[f'has_hist_{lag}hr'] = (df['SampleNum'] >= required_samples).astype(int)
+    
+    # Summary
+    print(f"\nLag availability indicators added for: {lag_windows}")
+    for lag in lag_windows:
+        available = df[f'has_hist_{lag}hr'].sum()
+        print(f"  {lag}hr lag available: {available} / {len(df)} samples ({100*available/len(df):.1f}%)")
+    
+    return df
+
+
+def prepare_hurricane_features_with_lags(df, dfUsage, include_targets=False):
+    """
+    Prepare features with intelligent handling of temporal lags.
+    Uses existing SampleNum which correctly handles gaps in observations.
+    """
+    print("\n" + "="*70)
+    print("PREPARING HURRICANE FEATURES WITH LAG HANDLING")
+    print("="*70)
+    
+    # Add storm maturity features using SampleNum
+    df = add_storm_maturity_features(df)
+    
+    # Add indicators for lag availability
+    df = add_lag_availability_indicators(df)
+    
+    # Fill historical lag nulls
+    hist_cols = [col for col in df.columns if col.startswith('Hist')]
+    print(f"\nProcessing {len(hist_cols)} historical lag features...")
+    
+    null_counts_before = df[hist_cols].isnull().sum().sum()
+    
+    for col in hist_cols:
+        df[col] = df[col].fillna(0)
+    
+    print(f"Filled {null_counts_before} historical lag nulls with 0")
+    
+    # Standard feature preparation
+    targetColumns = dfUsage["Feature"][(dfUsage["Usage"] == "target")]
+    
+    if include_targets:
+        dropFeatures = dfUsage["Feature"][(dfUsage["Usage"] == "ignore")]
+    else:
+        dropFeatures = dfUsage["Feature"][(dfUsage["Usage"] == "target") | 
+                                          (dfUsage["Usage"] == "ignore")]
+    
+    X = df.drop(columns=dropFeatures)
+    X = X.select_dtypes(include=[np.number])
+    
+    # Handle remaining nulls (non-historical features)
+    remaining_null_cols = X.columns[X.isnull().any()].tolist()
+    
+    if len(remaining_null_cols) > 0:
+        print(f"\nHandling nulls in {len(remaining_null_cols)} non-historical features:")
+        remaining_nulls = X[remaining_null_cols].isnull().sum()
+        print(remaining_nulls.nlargest(10))
+        
+        X = X.fillna(X.median())
+        print("Filled with column medians")
+    
+    print(f"\n" + "="*70)
+    print(f"FINAL FEATURE SUMMARY")
+    print(f"="*70)
+    print(f"Total features: {X.shape[1]}")
+    print(f"  - Historical lag features: {len([c for c in hist_cols if c in X.columns])}")
+    print(f"  - Lag availability indicators: {len([c for c in X.columns if 'has_hist_' in c])}")
+    print(f"  - Storm maturity features: 3")
+    print(f"  - Other features: {X.shape[1] - len([c for c in hist_cols if c in X.columns]) - len([c for c in X.columns if 'has_hist_' in c]) - 3}")
+    print(f"Total samples: {X.shape[0]}")
+    print("="*70 + "\n")
+    
+    return X, targetColumns, remaining_nulls

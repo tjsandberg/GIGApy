@@ -10,6 +10,7 @@ import argparse
 from data_io import (
     load_database_with_dtypes,
     prepare_features,
+    prepare_hurricane_features_with_lags,  # <-- Use this instead of prepare_features
     save_results_to_excel,
     create_notes_dataframe,
     generate_output_filename
@@ -32,8 +33,10 @@ args = parser.parse_args()
 try:
     # Load data
     df, dfUsage = load_database_with_dtypes(args.dbaseInFile, args.dbUsage)
-    X, targetColumns = prepare_features(df, dfUsage, include_targets=False)
-
+    df = df[df["PredLat_24"].notna()] # Remove tests with no output value
+    X, targetColumns, remainingNulls = prepare_hurricane_features_with_lags(df, dfUsage, include_targets=False)
+    #X, targetColumns = prepare_features(df, dfUsage, include_targets=False)
+    
     print("\n" + "=" * 80)
     print("Use Mutual Information to order features by Importance for predicting the target.")
     print("Then use Random Forest to select the optimal number of features")
@@ -60,7 +63,8 @@ try:
         # Feature selection experiment
         print(f"\nFEATURE SELECTION EXPERIMENT FOR {tc}")
         
-        feature_counts = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 100, 200, 300, 400, X.shape[1]]
+        #feature_counts = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 100, 200, 300, 400, X.shape[1]]
+        feature_counts = [5, 10]
         best_test_r2 = 0
         best_n_features = 0
     
@@ -113,13 +117,14 @@ try:
         save_results_to_excel(outFileName, {
             'MI_Imp': mi_importances,
             'Usage': dfUsage,
+            'Nulls': remainingNulls,
             'Notes': notes
         })
 
     print("\n" + "=" * 50)
     print("EXPERIMENT COMPLETE")
     print("=" * 50)
-
+    
 except Exception as e:
     print(f"\nAn error occurred: {type(e).__name__}")
     print(f"Details: {e}")
