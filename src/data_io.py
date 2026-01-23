@@ -228,7 +228,7 @@ def add_lag_availability_indicators(df):
     return df
 
 
-def prepare_hurricane_features_with_lags(df, dfUsage, include_targets=False):
+def prepare_hurricane_features_with_lags(df, dfUsage, include_targets=False, saveTLMdb=False):
     """
     Prepare features with intelligent handling of temporal lags.
     Uses existing SampleNum which correctly handles gaps in observations.
@@ -253,6 +253,14 @@ def prepare_hurricane_features_with_lags(df, dfUsage, include_targets=False):
         df[col] = df[col].fillna(0)
     
     print(f"Filled {null_counts_before} historical lag nulls with 0")
+
+    if saveTLMdb:
+        outFileName = generate_output_filename("./tmp/", f"timeLagNulls")
+        print(f"outFileName before replace: {outFileName}")
+        outFileName = outFileName.replace("ods","csv")
+        print(f"outFileName after replace: {outFileName}")
+        df.to_csv(outFileName, index=False) 
+        print(f"DB with time lag modifications saved to '{outFileName}'")
     
     # Standard feature preparation
     targetColumns = dfUsage["Feature"][(dfUsage["Usage"] == "target")]
