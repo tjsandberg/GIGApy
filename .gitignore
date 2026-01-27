@@ -8,4 +8,7 @@ __pycache__/
 # Editors
 .vscode/
 
+# Scratch directories
 tmp/
+oldsrc/
+neat/

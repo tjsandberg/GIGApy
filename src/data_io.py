@@ -297,3 +297,47 @@ def prepare_hurricane_features_with_lags(df, dfUsage, include_targets=False, sav
     print("="*70 + "\n")
     
     return X, targetColumns, remaining_nulls
+
+def prepare_hurricane_features_simplified(df, dfUsage, include_targets=False):
+    """
+    Simplified - just fill nulls, no derived features needed.
+    Assumes SampleNum is marked as "input" in dbUsage.
+    """
+    print("\n" + "="*70)
+    print("PREPARING HURRICANE FEATURES")
+    print("="*70)
+    
+    # Fill historical lag nulls
+    hist_cols = [col for col in df.columns if col.startswith('Hist')]
+    null_count = df[hist_cols].isnull().sum().sum()
+    for col in hist_cols:
+        df[col] = df[col].fillna(0)
+    print(f"Filled {null_count} historical nulls with 0")
+    
+    # Standard feature prep
+    targetColumns = dfUsage["Feature"][(dfUsage["Usage"] == "target")]
+    
+    if include_targets:
+        dropFeatures = dfUsage["Feature"][(dfUsage["Usage"] == "ignore")]
+    else:
+        dropFeatures = dfUsage["Feature"][(dfUsage["Usage"] == "target") | 
+                                          (dfUsage["Usage"] == "ignore")]
+    
+    X = df.drop(columns=dropFeatures)
+    X = X.select_dtypes(include=[np.number])
+    
+    # Handle other nulls
+    remaining_nulls = X.isnull().sum()
+    if remaining_nulls.sum() > 0:
+        X = X.fillna(X.median())
+        print(f"Filled {remaining_nulls.sum()} non-historical nulls with medians")
+    
+    print(f"\nFinal: {X.shape[1]} features, {X.shape[0]} samples")
+    
+    # Verify SampleNum is included
+    if 'SampleNum' in X.columns:
+        print(f"✓ SampleNum included (range: {X['SampleNum'].min()}-{X['SampleNum'].max()})")
+    else:
+        print("⚠ Warning: SampleNum not found - mark as 'input' in dbUsage")
+    
+    return X, targetColumns

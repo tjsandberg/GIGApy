@@ -11,6 +11,7 @@ from data_io import (
     load_database_with_dtypes,
     prepare_features,
     prepare_hurricane_features_with_lags,  # <-- Use this instead of prepare_features
+    prepare_hurricane_features_simplified,
     save_results_to_excel,
     create_notes_dataframe,
     generate_output_filename
@@ -34,7 +35,8 @@ try:
     # Load data
     df, dfUsage = load_database_with_dtypes(args.dbaseInFile, args.dbUsage)
     #df = df[df["PredLat_24"].notna()] # Remove tests with no output value
-    X, targetColumns, remainingNulls = prepare_hurricane_features_with_lags(df, dfUsage, include_targets=False, saveTLMdb=False)
+    #X, targetColumns, remainingNulls = prepare_hurricane_features_with_lags(df, dfUsage, include_targets=False, saveTLMdb=False)
+    X, targetColumns = prepare_hurricane_features_simplified(df, dfUsage, include_targets=False)
     #X, targetColumns = prepare_features(df, dfUsage, include_targets=False)
 
     print("\n" + "=" * 80)
@@ -116,7 +118,7 @@ try:
         save_results_to_excel(outFileName, {
             'MI_Imp': mi_importances,
             'Usage': dfUsage,
-            'Nulls': remainingNulls,
+            #'Nulls': remainingNulls,
             'Notes': notes
         })
 
