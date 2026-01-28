@@ -9,8 +9,6 @@ import argparse
 # Import shared utilities
 from data_io import (
     load_database_with_dtypes,
-    prepare_features,
-    prepare_hurricane_features_with_lags,  # <-- Use this instead of prepare_features
     prepare_hurricane_features_simplified,
     save_results_to_excel,
     create_notes_dataframe,
@@ -34,10 +32,7 @@ args = parser.parse_args()
 try:
     # Load data
     df, dfUsage = load_database_with_dtypes(args.dbaseInFile, args.dbUsage)
-    #df = df[df["PredLat_24"].notna()] # Remove tests with no output value
-    #X, targetColumns, remainingNulls = prepare_hurricane_features_with_lags(df, dfUsage, include_targets=False, saveTLMdb=False)
-    X, targetColumns = prepare_hurricane_features_simplified(df, dfUsage, include_targets=False)
-    #X, targetColumns = prepare_features(df, dfUsage, include_targets=False)
+    X, targetColumns, null_count, remaining_nulls_df = prepare_hurricane_features_simplified(df, dfUsage, include_targets=False)
 
     print("\n" + "=" * 80)
     print("Use Mutual Information to order features by Importance for predicting the target.")
@@ -64,11 +59,11 @@ try:
         
         # Feature selection experiment
         print(f"\nFEATURE SELECTION EXPERIMENT FOR {tc}")
-        
         feature_counts = [5, 10, 15, 20, 30, 45, 75, 200, 400, X.shape[1]]
         best_test_r2 = 0
         best_n_features = 0
-    
+        results = []
+        
         # Split data for Random Forest experiments
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.2, random_state=42
@@ -98,8 +93,14 @@ try:
             if test_r2 > best_test_r2:
                 best_test_r2 = test_r2
                 best_n_features = n_features
-
+            
             print(f"Features: {n_features:3d} | Train R²: {train_r2:.4f} | Test R²: {test_r2:.4f}")
+
+            results.append({
+                'n_features': n_features,
+                'train_r2': f"{train_r2:.4f}",
+                'test_r2': f"{test_r2:.4f}"
+            })
 
         print(f"\nRESULT: Optimal number of features is {best_n_features} "
               f"which produces R² = {best_test_r2:.4f}")
@@ -109,16 +110,20 @@ try:
             "Target": tc,
             "Input File": args.dbaseInFile,
             "Usage File": args.dbUsage,
+            "Hist Nulls -> 0": null_count,
+            "Rem Nulls -> median": remaining_nulls_df['Null_Count'].sum(),
             "OptimalNF": best_n_features,
             "R2": best_test_r2
         })
         
         # Save results
+        results_df = pd.DataFrame(results)
         outFileName = generate_output_filename(args.scratchDir, f"{tc}_featuresByMi")
         save_results_to_excel(outFileName, {
             'MI_Imp': mi_importances,
             'Usage': dfUsage,
-            #'Nulls': remainingNulls,
+            'Nulls': remaining_nulls_df,
+            'RfResults': results_df,
             'Notes': notes
         })
 

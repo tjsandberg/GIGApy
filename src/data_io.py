@@ -111,7 +111,7 @@ def save_results_to_excel(filename, sheets_dict):
     """
     with pd.ExcelWriter(filename) as writer:
         for sheet_name, df in sheets_dict.items():
-            df.to_excel(writer, sheet_name=sheet_name, index=True)
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
     print(f"Results saved to '{filename}'")
 
 
@@ -332,12 +332,22 @@ def prepare_hurricane_features_simplified(df, dfUsage, include_targets=False):
         X = X.fillna(X.median())
         print(f"Filled {remaining_nulls.sum()} non-historical nulls with medians")
     
-    print(f"\nFinal: {X.shape[1]} features, {X.shape[0]} samples")
+    # Convert Series to DataFrame for better Excel output
+    remaining_nulls_df = pd.DataFrame({
+        'Feature': remaining_nulls.index,
+        'Null_Count': remaining_nulls.values
+    })
     
+    # Sort by null count (descending) and filter to only features with nulls
+    remaining_nulls_df = remaining_nulls_df[remaining_nulls_df['Null_Count'] > 0]
+    remaining_nulls_df = remaining_nulls_df.sort_values('Null_Count', ascending=False).reset_index(drop=True)
+    
+    print(f"\nFinal: {X.shape[1]} features, {X.shape[0]} samples")
+
     # Verify SampleNum is included
     if 'SampleNum' in X.columns:
         print(f"✓ SampleNum included (range: {X['SampleNum'].min()}-{X['SampleNum'].max()})")
     else:
         print("⚠ Warning: SampleNum not found - mark as 'input' in dbUsage")
     
-    return X, targetColumns
+    return X, targetColumns, null_count, remaining_nulls_df  # Return DataFrame instead of Series
