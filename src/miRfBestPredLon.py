@@ -63,6 +63,7 @@ try:
         # Feature selection experiment
         print(f"\nFEATURE SELECTION EXPERIMENT FOR {tc}")
         feature_counts = [5, 10, 15, 20, 30, 45, 75, 200, 400, X.shape[1]]
+        #feature_counts = [5, 10, 15]
         best_test_r2 = 0
         best_n_features = 0
         results = []
@@ -115,8 +116,40 @@ try:
               f"which produces R² = {best_test_r2:.4f}")
         #print(f"best_PredLon_24_df:\n{best_PredLon_24_df.head}")
         X["best_PredLon_24_df"] = best_PredLon_24_df
-        #print(f"X with PL added:\n{X.head}")
+        squared_errors = (df['PredLon_24'] - best_PredLon_24_df['best_PredLon_24']) ** 2
+        mean_squared_error = squared_errors.mean()
+        print(f"mean_squared_error: {mean_squared_error}")
+        rmse = np.sqrt(mean_squared_error)
+        print(f"rmse: {rmse}")
+        actVsPred = pd.DataFrame({
+            'actual': df['PredLon_24'],
+            'predicted': best_PredLon_24_df['best_PredLon_24']
+        })
+        #actVsPred['PredLon_24'] = df['PredLon_24']
+        #actVsPred['best_PredLon_24'] = best_PredLon_24_df['best_PredLon_24']
+        
+        outFileName = generate_output_filename(args.scratchDir, f"{tc}_actVsPred")
+        save_results_to_excel(outFileName, {
+            'actVsPred': actVsPred
+        })
 
+        
+        break
+        """
+
+        predLonDiff = best_PredLon_24_df['best_PredLon_24'] - df['PredLon_24']
+        predLonDiffSq = predLonDiff ** 2
+        print(f"predLonDiffSq:\n{predLonDiff.head}")
+        break
+
+        sumSq = predLonDiffSq[1].sum
+        print(f"sumSq:\n{sumSq}")
+        mse = sumSq/predLonDiff.count
+        print(f"mse:\n{mse}")
+        rmse = mse.sqrt
+        print(f"rmse:\n{rmse}")
+        #print(f"predLonDiff:\n{predLonDiff.head}")
+        break
         # Create notes
         notes = create_notes_dataframe({
             "Target": tc,
@@ -142,7 +175,7 @@ try:
     print("\n" + "=" * 50)
     print("EXPERIMENT COMPLETE")
     print("=" * 50)
-
+    """
 except Exception as e:
     print(f"\nAn error occurred: {type(e).__name__}")
     print(f"Details: {e}")
